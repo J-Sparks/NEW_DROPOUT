@@ -1,0 +1,44 @@
+library(rsample)  # data splitting 
+library(dplyr)    # data transformation
+library(ggplot2)  # data visualization
+library(caret)    # implementing with caret
+mydata.state.county.math <- read_csv("mydata.state.county.math.csv") %>%  #"AVE_HS_APR","CIP_APR",
+    mutate(EthnicityCode= EthnicityCdoe, Term1.EarnedHours=Term1.EaredHours, Prior_Hours=Stu_TotalUniversityHours,
+           FirstFallUWFGPA=TermGPA, FirstFallEarnedHours=Term1.EarnedHours, FirstFallMathGrade=Math_Grade_Range, FirstFallMathCRS=MathCRS.Level)
+ 
+ # my variables
+apr_varis.1stterm.dropouts <- c("APR", "Stu_CollegeCode", "Stu_Gender","Prior_Hours","GPA_HIGHSCHOOL","FirstFallUWFGPA","County_Group","EthnicityCode","FirstFallEarnedHours", "FirstFallMathGrade","FirstFallMathCRS",  "Cohort")
+
+apr_1st.term.data.math  <- mydata.state.county.math[,-1] %>% 
+    mutate(Dropout = ifelse( Cohort != 2021 & is.na(CIP_2ndFall), "Dropped","Stayed")) %>% 
+    mutate(FirstFallEarnedHours = as.integer(FirstFallEarnedHours)) %>% 
+    select(apr_varis.1stterm.dropouts,Dropout ) %>%  mutate(across(where(is.character), as.factor)) %>% select(-APR)  
+
+# dataset for Brian
+write.csv(apr_1st.term.data.math, "apr_dropout__1st.term.data.math.csv", row.names = F)
+ 
+#filter ftic2021
+not.ft2021.1stterm.math <- apr_1st.term.data.math %>% filter(Cohort != 2021 ) %>% select(-Cohort)
+ft2021.1stterm.math <- apr_1st.term.data.math %>% filter(Cohort == 2021 ) %>% select(-Cohort)
+#data partitions
+ft.1stdataIndex.math <- createDataPartition(not.ft2021.1stterm.math$Dropout, p=0.7, list = FALSE)
+ft.1st.train.math <- not.ft2021.1stterm.math[ft.1stdataIndex.math,] # Training Set
+ft.1st.test.math <- not.ft2021.1stterm.math[-ft.1stdataIndex.math,] # Test Set
+
+# modeling
+library(naivebayes)
+dropout.1stterm <- naive_bayes(Dropout~., data = ft.1st.train.math, usekernel = TRUE, bw="SJ", usepoisson = TRUE)
+#2nd methods
+# library(e1071)
+# x <- ft.1st.train.math[,-13]
+# y <- ft.1st.train.math[,13]
+# dropout.train <- train(x, y, "nb", trControl=trainControl(method="cv", number=5) )
+dropout.1stterm.1 <- naive_bayes(Dropout~., data = ft.1st.test.math, usekernel = TRUE)
+#prediction
+p.drop.train <- predict(dropout.1stterm, ft.1st.train.math, type="prob")
+tab.drop.train <- table(Predicted=predict(dropout.1stterm), Actural=ft.1st.train.math$Dropout);tab.drop.train
+p.drop.test <- predict(dropout.1stterm.1, ft.1st.test.math, type="prob")
+tab.drop.test <- table(Predicted= predict(dropout.1stterm.1), Actural=ft.1st.test.math$Dropout);tab.drop.test
+acc_f(tab.drop.train)
+acc_f(tab.drop.test)
+summary(dropout.1stterm)
