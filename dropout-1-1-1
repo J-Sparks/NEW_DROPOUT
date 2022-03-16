@@ -39,6 +39,11 @@ p.drop.train <- predict(dropout.1stterm, ft.1st.train.math, type="prob")
 tab.drop.train <- table(Predicted=predict(dropout.1stterm), Actural=ft.1st.train.math$Dropout);tab.drop.train
 p.drop.test <- predict(dropout.1stterm.1, ft.1st.test.math, type="prob")
 tab.drop.test <- table(Predicted= predict(dropout.1stterm.1), Actural=ft.1st.test.math$Dropout);tab.drop.test
+
+# accuracy function
+acc_f <- function(x){
+    round(sum(diag(x))/sum(x),4)
+}
 acc_f(tab.drop.train)
 acc_f(tab.drop.test)
 summary(dropout.1stterm)
